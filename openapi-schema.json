@@ -1,0 +1,172 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Video Authenticity Agent",
+    "description": "Detects deepfake, AI-generated, and manipulated video using STIL-Pipeline (EfficientNet-B4) trained on VideoSham and GenVidBench datasets, with Claude LLM reasoning layer for forensic analysis.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://serverless.on-demand.io/apps/video-authenticity"
+    }
+  ],
+  "paths": {
+    "/analyze": {
+      "post": {
+        "operationId": "analyzeVideo",
+        "summary": "Analyze a video for deepfake or manipulation detection",
+        "description": "Accepts an MP4 video URL, runs STIL-Pipeline deepfake detection, extracts suspicious segments, and uses Claude LLM to provide forensic reasoning and verdict.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["mp4_url"],
+                "properties": {
+                  "mp4_url": {
+                    "type": "string",
+                    "description": "URL to the MP4 video file to analyze. Supports Azure Blob Storage URLs with SAS tokens, and any publicly accessible MP4 URL."
+                  },
+                  "job_id": {
+                    "type": "string",
+                    "description": "Optional unique identifier for this analysis job."
+                  },
+                  "options": {
+                    "type": "object",
+                    "properties": {
+                      "max_frames": {
+                        "type": "integer",
+                        "default": 32,
+                        "description": "Maximum number of frames to sample from the video."
+                      },
+                      "sample_fps": {
+                        "type": "number",
+                        "default": 2,
+                        "description": "Frames per second to sample."
+                      },
+                      "top_k_segments": {
+                        "type": "integer",
+                        "default": 3,
+                        "description": "Number of top suspicious segments to return."
+                      },
+                      "run_llm_analysis": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Whether to run Claude LLM analysis on the detection results."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Analysis completed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "job_id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["completed", "failed"]
+                    },
+                    "video_score": {
+                      "type": "number",
+                      "description": "Overall manipulation probability from 0 (authentic) to 1 (manipulated)"
+                    },
+                    "classification": {
+                      "type": "string",
+                      "enum": ["authentic", "likely_authentic", "inconclusive", "likely_manipulated", "manipulated"],
+                      "description": "Classification based on the video score"
+                    },
+                    "confidence": {
+                      "type": "string",
+                      "enum": ["low", "medium", "high"],
+                      "description": "Confidence level of the classification"
+                    },
+                    "model": {
+                      "type": "object",
+                      "properties": {
+                        "name": { "type": "string" },
+                        "version": { "type": "string" },
+                        "notes": { "type": "string" }
+                      }
+                    },
+                    "metadata": {
+                      "type": "object",
+                      "properties": {
+                        "duration_seconds": { "type": "number" },
+                        "fps": { "type": "number" },
+                        "resolution": { "type": "string" },
+                        "codec": { "type": "string" },
+                        "filesize_bytes": { "type": "integer" }
+                      }
+                    },
+                    "suspicious_segments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "start": { "type": "number", "description": "Segment start time in seconds" },
+                          "end": { "type": "number", "description": "Segment end time in seconds" },
+                          "score": { "type": "number", "description": "Manipulation score for this segment" },
+                          "llm_analysis": { "type": "string", "description": "Claude LLM analysis of this segment" }
+                        }
+                      }
+                    },
+                    "llm_summary": {
+                      "type": "object",
+                      "properties": {
+                        "verdict": { "type": "string", "description": "Overall verdict from the LLM" },
+                        "explanation": { "type": "string", "description": "Detailed explanation of the findings" },
+                        "evidence": {
+                          "type": "array",
+                          "items": { "type": "string" },
+                          "description": "List of evidence points"
+                        },
+                        "recommended_actions": {
+                          "type": "array",
+                          "items": { "type": "string" },
+                          "description": "Recommended next steps"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "healthCheck",
+        "summary": "Check service health",
+        "responses": {
+          "200": {
+            "description": "Health status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string" },
+                    "backend": { "type": "object" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
