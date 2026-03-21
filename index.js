@@ -4,7 +4,7 @@ const fetch = require('node-fetch');
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 
-const GPU_BACKEND = process.env.GPU_BACKEND_URL || 'https://undertake-corporation-task-survivors.trycloudflare.com';
+const GPU_BACKEND = process.env.GPU_BACKEND_URL || 'https://launched-integrated-expect-watts.trycloudflare.com';
 
 // ── Health ──
 app.get('/health', async (req, res) => {
